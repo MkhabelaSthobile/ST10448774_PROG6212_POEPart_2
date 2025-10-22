@@ -1,0 +1,112 @@
+﻿@model IEnumerable<CMCS_App.Models.Claim>
+
+@{
+    ViewData["Title"] = "Academic Manager Dashboard";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-danger">Academic Manager Dashboard</h2>
+
+    <!-- Pending Claims for Final Verification -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-danger text-white">
+            Final Claim Verification
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Claim ID</th>
+                        <th>Lecturer</th>
+                        <th>Coordinator Approval</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var claim in Model.Where(c => c.Status == "Approved by Coordinator"))
+                    {
+                        <tr>
+                            <td>@claim.ClaimID</td>
+                            <td>@claim.Lecturer.FullName</td>
+                            <td>
+                                <span class="badge bg-success">@claim.Status</span>
+                            </td>
+                            <td>
+                                <form asp-action="Verify" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@claim.ClaimID" />
+                                    <button type="submit" class="btn btn-primary btn-sm">Verify</button>
+                                </form>
+                                <form asp-action="Reject" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@claim.ClaimID" />
+                                    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any(c => c.Status == "Approved by Coordinator"))
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No pending claims for verification.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Reviewed Claims -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-secondary text-white">
+            Reviewed Claims
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Claim ID</th>
+                        <th>Lecturer</th>
+                        <th>Month</th>
+                        <th>Hours Worked</th>
+                        <th>Total Amount</th>
+                        <th>Final Status</th>
+                        <th>Reviewed On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var claim in Model.Where(c => c.Status == "Approved by Manager" || c.Status.Contains("Rejected by Manager")))
+                    {
+                        <tr>
+                            <td>@claim.ClaimID</td>
+                            <td>@claim.Lecturer.FullName</td>
+                            <td>@claim.Month</td>
+                            <td>@claim.HoursWorked</td>
+                            <td>R @claim.TotalAmount</td>
+                            <td>
+                                <span class="badge @(claim.Status.Contains("Approved") ? "bg-success" : "bg-danger")">
+                                    @claim.Status
+                                </span>
+                            </td>
+                            <td>@claim.SubmissionDate.ToShortDateString()</td>
+                        </tr>
+                    }
+                    @if (!Model.Any(c => c.Status == "Approved by Manager" || c.Status.Contains("Rejected by Manager")))
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No reviewed claims yet.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Reports -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+            Generate Reports
+        </div>
+        <div class="card-body">
+            <button class="btn btn-outline-primary">Download Claims Summary (PDF)</button>
+        </div>
+    </div>
+</div>

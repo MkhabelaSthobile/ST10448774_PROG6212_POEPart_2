@@ -1,0 +1,112 @@
+﻿@model IEnumerable<CMCS_App.Models.Claim>
+
+@{
+    ViewData["Title"] = "Programme Coordinator Dashboard";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-info">Programme Coordinator Dashboard</h2>
+
+    <!-- Pending Claims for Review -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            Pending Claims for Review
+        </div>
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Claim ID</th>
+                        <th>Lecturer</th>
+                        <th>Module</th>
+                        <th>Month</th>
+                        <th>Hours</th>
+                        <th>Hourly Rate</th>
+                        <th>Total Amount</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var claim in Model.Where(c => c.Status == "Submitted"))
+                    {
+                        <tr>
+                            <td>@claim.ClaimID</td>
+                            <td>@claim.LecturerID</td> 
+                            <td>@claim.ModuleName</td>
+                            <td>@claim.Month</td>
+                            <td>@claim.HoursWorked</td>
+                            <td>R @claim.HourlyRate</td>
+                            <td>R @claim.TotalAmount</td>
+                            <td>
+                                <form asp-action="Approve" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@claim.ClaimID" />
+                                    <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                                </form>
+                                <form asp-action="Reject" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@claim.ClaimID" />
+                                    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any(c => c.Status == "Submitted"))
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">No pending claims.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Already Reviewed Claims -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+            Reviewed Claims
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered table-striped align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Claim ID</th>
+                        <th>Lecturer</th>
+                        <th>Module</th>
+                        <th>Month</th>
+                        <th>Hours</th>
+                        <th>Hourly Rate</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                        <th>Reviewed On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var claim in Model.Where(c => c.Status != "Submitted"))
+                    {
+                        <tr>
+                            <td>@claim.ClaimID</td>
+                            <td>@claim.LecturerID</td>
+                            <td>@claim.ModuleName</td>
+                            <td>@claim.Month</td>
+                            <td>@claim.HoursWorked</td>
+                            <td>R @claim.HourlyRate</td>
+                            <td>R @claim.TotalAmount</td>
+                            <td>
+                                <span class="badge @(claim.Status.Contains("Approved") ? "bg-success" : "bg-danger")">
+                                    @claim.Status
+                                </span>
+                            </td>
+                            <td>@claim.SubmissionDate.ToShortDateString()</td>
+                        </tr>
+                    }
+                    @if (!Model.Any(c => c.Status != "Submitted"))
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">No reviewed claims yet.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
