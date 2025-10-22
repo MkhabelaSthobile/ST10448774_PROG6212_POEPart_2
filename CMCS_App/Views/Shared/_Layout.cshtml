@@ -25,72 +25,20 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
-                        @if (Context.Session.GetString("UserRole") != null)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Lecturer" asp-action="Index">Lecturer</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="ProgrammeCoordinator" asp-action="Index">Programme Coordinator</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="AcademicManager" asp-action="Index">Academic Manager</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="SystemStatus">System Status</a>
-                            </li>
-                        }
-                    </ul>
-                    <ul class="navbar-nav">
-                        @if (Context.Session.GetString("UserRole") != null)
-                        {
-                            <li class="nav-item">
-                                <span class="nav-link text-dark">
-                                    <i class="fas fa-user"></i>
-                                    Welcome, @Context.Session.GetString("UserName")
-                                    <span class="badge bg-secondary">@Context.Session.GetString("UserRole")</span>
-                                </span>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Logout">
-                                    <i class="fas fa-sign-out-alt"></i> Logout
-                                </a>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Login</a>
-                            </li>
-                        }
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Lecturer" asp-action="Index">Lecturer</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="ProgrammeCoordinator" asp-action="Index">Programme Coordinator</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="AcademicManager" asp-action="Index">Academic Manager</a>
+                        </li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
-
-    <!-- Real-time Status Banner -->
-    @if (Context.Session.GetString("UserRole") != null)
-    {
-        <div class="container-fluid bg-light py-2">
-            <div class="container">
-                <div class="row text-center">
-                    <div class="col-md-3">
-                        <small class="text-muted">Logged in as: <strong>@Context.Session.GetString("UserRole")</strong></small>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted">Session: <span id="sessionTimer">30:00</span></small>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted" id="currentTime">@DateTime.Now.ToString("dd MMM yyyy HH:mm")</small>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted">System: <span class="text-success"><i class="fas fa-circle"></i> Online</span></small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
 
     <div class="container">
         <main role="main" class="pb-3">
@@ -101,104 +49,11 @@
     <footer class="border-top footer text-muted">
         <div class="container">
             &copy; 2025 - Contract Monthly Claim System - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-            <span class="float-end">
-                <small>Version 1.0 | Last updated: @DateTime.Now.ToString("yyyy-MM-dd HH:mm")</small>
-            </span>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-
-    <!-- Real-time Status Script -->
-    <script>
-        // Update current time every minute
-        function updateCurrentTime() {
-            const now = new Date();
-            document.getElementById('currentTime').textContent =
-                now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
-                now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        }
-
-        // Session timer (30 minutes)
-        let sessionTime = 30 * 60; // 30 minutes in seconds
-        function updateSessionTimer() {
-            const minutes = Math.floor(sessionTime / 60);
-            const seconds = sessionTime % 60;
-            document.getElementById('sessionTimer').textContent =
-                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-            if (sessionTime > 0) {
-                sessionTime--;
-                setTimeout(updateSessionTimer, 1000);
-            } else {
-                // Auto-logout when session expires
-                window.location.href = '@Url.Action("Logout", "Home")';
-            }
-        }
-
-        // Auto-refresh status every 30 seconds if on status page
-        function autoRefreshStatus() {
-            if (window.location.pathname.includes('SystemStatus') ||
-                window.location.pathname.includes('Index')) {
-                setTimeout(() => {
-                    window.location.reload();
-                }, 30000); // 30 seconds
-            }
-        }
-
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            updateCurrentTime();
-            setInterval(updateCurrentTime, 60000); // Update time every minute
-
-            updateSessionTimer(); // Start session timer
-            autoRefreshStatus(); // Start auto-refresh if on status page
-
-            // Show notification for new claims (simulated)
-            setTimeout(() => {
-                if (Math.random() > 0.7) { // 30% chance to show demo notification
-                    showNotification('New claims may require your attention.');
-                }
-            }, 5000);
-        });
-
-        function showNotification(message) {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
-            notification.style.cssText = 'top: 100px; right: 20px; z-index: 1050; min-width: 300px;';
-            notification.innerHTML = `
-                <strong><i class="fas fa-bell"></i> Notification</strong>
-                <br>${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(notification);
-
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 5000);
-        }
-
-        // AJAX function to check for status updates
-        function checkStatusUpdates() {
-            fetch('@Url.Action("GetStatusUpdates", "Home")')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.hasUpdates) {
-                        showNotification('Status updated: ' + data.message);
-                    }
-                })
-                .catch(error => console.error('Error checking status:', error));
-        }
-
-        // Check for updates every 60 seconds
-        setInterval(checkStatusUpdates, 60000);
-    </script>
-
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

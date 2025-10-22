@@ -21,7 +21,7 @@ namespace CMCS_App.Controllers
 
         public IActionResult Index()
         {
-            int currentLecturerId = 1; 
+            int currentLecturerId = 1;
 
             var claims = _context.Claims
                 .Include(c => c.Lecturer)
@@ -40,18 +40,17 @@ namespace CMCS_App.Controllers
             {
                 if (ModelState.IsValid)
                 {
-                    claim.LecturerID = 1; 
+                    claim.LecturerID = 1;
 
                     // Get lecturer details to set module name and hourly rate
                     var lecturer = await _context.Lecturers.FindAsync(claim.LecturerID);
                     if (lecturer != null)
                     {
-                        claim.ModuleName = lecturer.ModuleName;
+                        lecturer.ModuleName = lecturer.ModuleName;
                         claim.HourlyRate = lecturer.HourlyRate;
                     }
 
-                    // Calculate total amount
-                    claim.TotalAmount = claim.CalculateTotal(claim.HourlyRate);
+                    claim.TotalAmount = claim.CalculateTotal(lecturer.HourlyRate);
                     claim.Status = "Submitted";
                     claim.SubmissionDate = DateTime.Now;
 
@@ -149,7 +148,7 @@ namespace CMCS_App.Controllers
             return View("Index", claims);
         }
 
-       public async Task<IActionResult> DownloadDocument(int claimId, string fileName)
+        public async Task<IActionResult> DownloadDocument(int claimId, string fileName)
         {
             if (string.IsNullOrEmpty(fileName))
             {
@@ -159,7 +158,7 @@ namespace CMCS_App.Controllers
             try
             {
                 // Verify that the current user owns this claim
-                int currentLecturerId = 1; 
+                int currentLecturerId = 1;
                 var claim = await _context.Claims
                     .FirstOrDefaultAsync(c => c.ClaimID == claimId && c.LecturerID == currentLecturerId);
 
@@ -264,7 +263,7 @@ namespace CMCS_App.Controllers
                 .Include(c => c.Lecturer)
                 .FirstOrDefaultAsync(c => c.ClaimID == id);
 
-            if (claim == null || claim.LecturerID != 1) 
+            if (claim == null || claim.LecturerID != 1)
             {
                 return NotFound();
             }

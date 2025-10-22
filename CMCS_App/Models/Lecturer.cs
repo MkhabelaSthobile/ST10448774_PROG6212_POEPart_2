@@ -1,18 +1,38 @@
-﻿using System.Security.Claims;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CMCS_App.Models
 {
     public class Lecturer
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int LecturerID { get; set; }
-        public string FullName { get; set; }
-        public string Email { get; set; }
-        public string Password { get; set; } = string.Empty;
-        public string ModuleName { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required]
+        [EmailAddress]
+        [StringLength(100)]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(255)]
+        public string Password { get; set; } = "default123";
+
+        [Required]
+        [StringLength(100)]
+        public string ModuleName { get; set; } = string.Empty;
+
+        [Required]
+        [Column(TypeName = "decimal(10,2)")]
         public decimal HourlyRate { get; set; }
 
+        
 
-        // Methods (prototype only)
+
         public void SubmitClaim(Claim claim)
         {
             claim.SubmitForApproval();
