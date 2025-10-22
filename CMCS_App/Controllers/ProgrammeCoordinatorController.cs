@@ -2,108 +2,133 @@
 using CMCS_App.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
-public class ProgrammeCoordinatorController : Controller
+namespace CMCS_App.Controllers
 {
-    private readonly ApplicationDbContext _context;
-
-    public ProgrammeCoordinatorController(ApplicationDbContext context)
+    public class ProgrammeCoordinatorController : Controller
     {
-        _context = context;
-    }
+        private readonly ApplicationDbContext _context;
+        private readonly ILogger<ProgrammeCoordinatorController> _logger;
 
-    public IActionResult Index()
-    {
-        // Get claims from database with lecturer information
-        var claims = _context.Claims
-            .Include(c => c.Lecturer)
-            .OrderByDescending(c => c.SubmissionDate)
-            .ToList();
-
-        return View(claims);
-    }
-
-    [HttpPost]
-    public IActionResult Approve(int id)
-    {
-        try
+        public ProgrammeCoordinatorController(ApplicationDbContext context, ILogger<ProgrammeCoordinatorController> logger)
         {
-            var claim = _context.Claims
-                .Include(c => c.Lecturer)
-                .FirstOrDefault(c => c.ClaimID == id);
-
-            if (claim != null)
-            {
-                claim.Status = "Approved by Coordinator";
-                claim.RejectionReason = null; // Clear any previous rejection reason
-                _context.SaveChanges();
-
-                TempData["SuccessMessage"] = $"Claim #{claim.ClaimID} for {claim.Lecturer.FullName} has been approved.";
-            }
-            else
-            {
-                TempData["ErrorMessage"] = "Claim not found.";
-            }
-        }
-        catch (Exception ex)
-        {
-            TempData["ErrorMessage"] = "Error approving claim. Please try again.";
-            Console.WriteLine($"Error approving claim: {ex.Message}");
+            _context = context;
+            _logger = logger;
         }
 
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost]
-    public IActionResult Reject(int id, string rejectionReason)
-    {
-        try
+        public IActionResult Index()
         {
-            var claim = _context.Claims
-                .Include(c => c.Lecturer)
-                .FirstOrDefault(c => c.ClaimID == id);
-
-            if (claim != null)
+            try
             {
-                if (string.IsNullOrEmpty(rejectionReason))
+                var claims = _context.Claims
+                    .Include(c => c.Lecturer)
+                    .OrderByDescending(c => c.SubmissionDate)
+                    .ToList();
+
+                _logger.LogInformation($"Loaded {claims.Count} claims for coordinator review");
+                return View(claims);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading coordinator dashboard");
+                TempData["ErrorMessage"] = "Error loading dashboard. Please check database connection.";
+                return View(new List<Claim>());
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Approve(int id)
+        {
+            try
+            {
+                var claim = _context.Claims
+                    .Include(c => c.Lecturer)
+                    .FirstOrDefault(c => c.ClaimID == id);
+
+                if (claim != null)
                 {
-                    TempData["ErrorMessage"] = "Please provide a reason for rejection.";
-                    return RedirectToAction(nameof(Index));
+                    claim.Status = "Approved by Coordinator";
+                    claim.RejectionReason = null;
+                    _context.SaveChanges();
+
+                    TempData["SuccessMessage"] = $"Claim #{claim.ClaimID} for {claim.Lecturer?.FullName} has been approved.";
+                    _logger.LogInformation($"Claim {id} approved by coordinator");
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Claim not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving claim: {ClaimId}", id);
+                TempData["ErrorMessage"] = "Error approving claim. Please try again.";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Reject(int id, string rejectionReason)
+        {
+            try
+            {
+                var claim = _context.Claims
+                    .Include(c => c.Lecturer)
+                    .FirstOrDefault(c => c.ClaimID == id);
+
+                if (claim != null)
+                {
+                    if (string.IsNullOrWhiteSpace(rejectionReason))
+                    {
+                        TempData["ErrorMessage"] = "Please provide a reason for rejection.";
+                        return RedirectToAction(nameof(Index));
+                    }
+
+                    claim.Status = "Rejected by Coordinator";
+                    claim.RejectionReason = rejectionReason.Trim();
+                    _context.SaveChanges();
+
+                    TempData["SuccessMessage"] = $"Claim #{claim.ClaimID} for {claim.Lecturer?.FullName} has been rejected.";
+                    _logger.LogInformation($"Claim {id} rejected by coordinator. Reason: {rejectionReason}");
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Claim not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting claim: {ClaimId}", id);
+                TempData["ErrorMessage"] = "Error rejecting claim. Please try again.";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        public IActionResult Details(int id)
+        {
+            try
+            {
+                var claim = _context.Claims
+                    .Include(c => c.Lecturer)
+                    .FirstOrDefault(c => c.ClaimID == id);
+
+                if (claim == null)
+                {
+                    return NotFound();
                 }
 
-                claim.Status = "Rejected by Coordinator";
-                claim.RejectionReason = rejectionReason;
-                _context.SaveChanges();
-
-                TempData["SuccessMessage"] = $"Claim #{claim.ClaimID} for {claim.Lecturer.FullName} has been rejected.";
+                return View(claim);
             }
-            else
+            catch (Exception ex)
             {
-                TempData["ErrorMessage"] = "Claim not found.";
+                _logger.LogError(ex, "Error loading claim details: {ClaimId}", id);
+                TempData["ErrorMessage"] = "Error loading claim details.";
+                return RedirectToAction(nameof(Index));
             }
         }
-        catch (Exception ex)
-        {
-            TempData["ErrorMessage"] = "Error rejecting claim. Please try again.";
-            Console.WriteLine($"Error rejecting claim: {ex.Message}");
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
-
-    // New action to view claim details
-    public IActionResult Details(int id)
-    {
-        var claim = _context.Claims
-            .Include(c => c.Lecturer)
-            .FirstOrDefault(c => c.ClaimID == id);
-
-        if (claim == null)
-        {
-            return NotFound();
-        }
-
-        return View(claim);
     }
 }

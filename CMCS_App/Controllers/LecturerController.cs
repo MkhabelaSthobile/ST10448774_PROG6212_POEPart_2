@@ -2,7 +2,6 @@
 using CMCS_App.Models;
 using CMCS_App.Data;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 
 namespace CMCS_App.Controllers
 {
@@ -21,60 +20,99 @@ namespace CMCS_App.Controllers
 
         public IActionResult Index()
         {
-            int currentLecturerId = 1;
+            try
+            {
+                int currentLecturerId = 1;
 
-            var claims = _context.Claims
-                .Include(c => c.Lecturer)
-                .Where(c => c.LecturerID == currentLecturerId)
-                .OrderByDescending(c => c.SubmissionDate)
-                .ToList();
+                var claims = _context.Claims
+                    .Include(c => c.Lecturer)
+                    .Where(c => c.LecturerID == currentLecturerId)
+                    .OrderByDescending(c => c.SubmissionDate)
+                    .ToList();
 
-            return View(claims);
+                _logger.LogInformation($"Loaded {claims.Count} claims for lecturer {currentLecturerId}");
+                return View(claims);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading lecturer dashboard");
+                TempData["ErrorMessage"] = "Error loading dashboard. Please check database connection.";
+                return View(new List<Claim>());
+            }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SubmitClaim(Claim claim, IFormFile supportingDocument)
+        public async Task<IActionResult> SubmitClaim(string moduleName, string month, int hoursWorked, decimal hourlyRate, IFormFile supportingDocument)
         {
             try
             {
-                if (ModelState.IsValid)
+                if (string.IsNullOrWhiteSpace(moduleName) || string.IsNullOrWhiteSpace(month))
                 {
-                    // Set lecturer ID (using demo ID since no login)
-                    claim.LecturerID = 1;
+                    TempData["ErrorMessage"] = "Module name and month are required.";
+                    return RedirectToAction(nameof(Index));
+                }
 
-                    // Calculate total amount using user-input values
-                    claim.TotalAmount = claim.CalculateTotal();
-                    claim.Status = "Submitted";
-                    claim.SubmissionDate = DateTime.Now;
+                if (hoursWorked < 1 || hoursWorked > 200)
+                {
+                    TempData["ErrorMessage"] = "Hours worked must be between 1 and 200.";
+                    return RedirectToAction(nameof(Index));
+                }
 
-                    // Handle file upload with validation
-                    string uploadedFileName = await HandleFileUpload(supportingDocument);
+                if (hourlyRate < 0.01m || hourlyRate > 1000m)
+                {
+                    TempData["ErrorMessage"] = "Hourly rate must be between R0.01 and R1000.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var claim = new Claim
+                {
+                    LecturerID = 1,
+                    ModuleName = moduleName.Trim(),
+                    Month = month,
+                    HoursWorked = hoursWorked,
+                    HourlyRate = hourlyRate,
+                    SubmissionDate = DateTime.Now,
+                    Status = "Submitted"
+                };
+
+                claim.TotalAmount = claim.CalculateTotal();
+
+                if (supportingDocument != null && supportingDocument.Length > 0)
+                {
+                    var uploadedFileName = await HandleFileUpload(supportingDocument);
                     if (!string.IsNullOrEmpty(uploadedFileName))
                     {
                         claim.SupportingDocument = uploadedFileName;
                     }
-
-                    _context.Claims.Add(claim);
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Claim submitted successfully!" +
-                        (!string.IsNullOrEmpty(uploadedFileName) ? " Document uploaded successfully." : "");
-                    return RedirectToAction(nameof(Index));
+                    else if (ModelState.ContainsKey("SupportingDocument"))
+                    {
+                        TempData["ErrorMessage"] = ModelState["SupportingDocument"].Errors.FirstOrDefault()?.ErrorMessage;
+                        return RedirectToAction(nameof(Index));
+                    }
                 }
+
+                _context.Claims.Add(claim);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = $"Claim submitted successfully! Total Amount: R{claim.TotalAmount:N2}" +
+                    (claim.SupportingDocument != null ? " | Document uploaded." : "");
+
+                _logger.LogInformation($"Claim {claim.ClaimID} submitted successfully by lecturer 1");
+                return RedirectToAction(nameof(Index));
             }
             catch (DbUpdateException dbEx)
             {
                 _logger.LogError(dbEx, "Database error submitting claim");
-                TempData["ErrorMessage"] = "Database error submitting claim. Please try again.";
+                TempData["ErrorMessage"] = "Database error. Please check your input and try again.";
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error submitting claim");
-                TempData["ErrorMessage"] = "Error submitting claim. Please try again.";
+                TempData["ErrorMessage"] = "An error occurred while submitting your claim. Please try again.";
             }
 
-            return await LoadIndexViewWithError();
+            return RedirectToAction(nameof(Index));
         }
 
         private async Task<string> HandleFileUpload(IFormFile supportingDocument)
@@ -84,27 +122,24 @@ namespace CMCS_App.Controllers
 
             try
             {
-                // Validate file size (5MB limit)
                 if (supportingDocument.Length > 5 * 1024 * 1024)
                 {
                     ModelState.AddModelError("SupportingDocument", "File size cannot exceed 5MB.");
                     return null;
                 }
 
-                // Validate file type
                 var allowedExtensions = new[] { ".pdf", ".docx", ".xlsx", ".jpg", ".png", ".jpeg" };
                 var fileExtension = Path.GetExtension(supportingDocument.FileName).ToLower();
 
                 if (!allowedExtensions.Contains(fileExtension))
                 {
                     ModelState.AddModelError("SupportingDocument",
-                        "Invalid file type. Allowed types: PDF, DOCX, XLSX, JPG, PNG.");
+                        "Invalid file type. Allowed: PDF, DOCX, XLSX, JPG, PNG.");
                     return null;
                 }
 
                 var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
 
-                // Create directory if it doesn't exist
                 if (!Directory.Exists(uploadsFolder))
                 {
                     Directory.CreateDirectory(uploadsFolder);
@@ -119,7 +154,7 @@ namespace CMCS_App.Controllers
                     await supportingDocument.CopyToAsync(fileStream);
                 }
 
-                _logger.LogInformation($"File uploaded successfully: {uniqueFileName}, Size: {supportingDocument.Length} bytes");
+                _logger.LogInformation($"File uploaded: {uniqueFileName}, Size: {supportingDocument.Length} bytes");
                 return uniqueFileName;
             }
             catch (Exception ex)
@@ -128,18 +163,6 @@ namespace CMCS_App.Controllers
                 ModelState.AddModelError("SupportingDocument", "Error uploading file. Please try again.");
                 return null;
             }
-        }
-
-        private async Task<IActionResult> LoadIndexViewWithError()
-        {
-            int currentLecturerId = 1;
-            var claims = await _context.Claims
-                .Include(c => c.Lecturer)
-                .Where(c => c.LecturerID == currentLecturerId)
-                .OrderByDescending(c => c.SubmissionDate)
-                .ToListAsync();
-
-            return View("Index", claims);
         }
 
         public async Task<IActionResult> DownloadDocument(int claimId, string fileName)
@@ -151,7 +174,6 @@ namespace CMCS_App.Controllers
 
             try
             {
-                // Verify that the current user owns this claim
                 int currentLecturerId = 1;
                 var claim = await _context.Claims
                     .FirstOrDefaultAsync(c => c.ClaimID == claimId && c.LecturerID == currentLecturerId);
@@ -175,7 +197,6 @@ namespace CMCS_App.Controllers
                 }
                 memory.Position = 0;
 
-                // Determine content type
                 var contentType = GetContentType(fileName);
                 var originalFileName = fileName.Contains('_') ?
                     fileName.Substring(0, fileName.LastIndexOf('_')) + Path.GetExtension(fileName) :
@@ -220,14 +241,12 @@ namespace CMCS_App.Controllers
                     return NotFound();
                 }
 
-                // Only allow deletion if claim is still pending or submitted
-                if (claim.Status != "Pending" && claim.Status != "Submitted")
+                if (claim.Status != "Submitted")
                 {
                     TempData["ErrorMessage"] = "Cannot delete claim that has already been processed.";
                     return RedirectToAction(nameof(Index));
                 }
 
-                // Delete associated file if exists
                 if (!string.IsNullOrEmpty(claim.SupportingDocument))
                 {
                     var filePath = Path.Combine(_environment.WebRootPath, "uploads", claim.SupportingDocument);
@@ -241,6 +260,7 @@ namespace CMCS_App.Controllers
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Claim deleted successfully.";
+                _logger.LogInformation($"Claim {id} deleted by lecturer {currentLecturerId}");
             }
             catch (Exception ex)
             {
@@ -253,16 +273,25 @@ namespace CMCS_App.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
-            var claim = await _context.Claims
-                .Include(c => c.Lecturer)
-                .FirstOrDefaultAsync(c => c.ClaimID == id);
-
-            if (claim == null || claim.LecturerID != 1)
+            try
             {
-                return NotFound();
-            }
+                var claim = await _context.Claims
+                    .Include(c => c.Lecturer)
+                    .FirstOrDefaultAsync(c => c.ClaimID == id);
 
-            return View(claim);
+                if (claim == null || claim.LecturerID != 1)
+                {
+                    return NotFound();
+                }
+
+                return View(claim);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading claim details: {ClaimId}", id);
+                TempData["ErrorMessage"] = "Error loading claim details.";
+                return RedirectToAction(nameof(Index));
+            }
         }
     }
 }

@@ -19,11 +19,11 @@ namespace CMCS_App.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Simple configuration - let EF Core handle the rest
             modelBuilder.Entity<Claim>()
                 .HasOne(c => c.Lecturer)
                 .WithMany()
-                .HasForeignKey(c => c.LecturerID);
+                .HasForeignKey(c => c.LecturerID)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

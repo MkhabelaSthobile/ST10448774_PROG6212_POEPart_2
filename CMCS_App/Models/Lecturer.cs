@@ -31,9 +31,6 @@ namespace CMCS_App.Models
         [Column(TypeName = "decimal(10,2)")]
         public decimal HourlyRate { get; set; }
 
-        
-
-
         public void SubmitClaim(Claim claim)
         {
             claim.SubmitForApproval();

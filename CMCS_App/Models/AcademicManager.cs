@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Security.Claims;
 
 namespace CMCS_App.Models
 {
@@ -16,7 +15,6 @@ namespace CMCS_App.Models
         [Required]
         public string Email { get; set; } = string.Empty;
 
-        // Methods (prototype only)
         public void VerifyClaim(Claim claim)
         {
             claim.UpdateStatus("Verified by Manager");
@@ -29,7 +27,7 @@ namespace CMCS_App.Models
 
         public void RejectClaim(Claim claim, string reason)
         {
-            claim.UpdateStatus($"Rejected by Manager: {reason}");
+            claim.UpdateStatus("Rejected by Manager", reason);
         }
 
         public string GenerateSummaryReport(List<Claim> claims)

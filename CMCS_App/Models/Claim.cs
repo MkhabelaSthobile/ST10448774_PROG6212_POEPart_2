@@ -14,6 +14,9 @@ namespace CMCS_App.Models
         [ForeignKey("Lecturer")]
         public int LecturerID { get; set; }
 
+        [StringLength(100)]
+        public string? ModuleName { get; set; }
+
         [Required]
         [StringLength(50)]
         public string Month { get; set; } = string.Empty;
@@ -33,9 +36,7 @@ namespace CMCS_App.Models
 
         [Required]
         [StringLength(100)]
-        public string Status { get; set; } = "Submitted"; // Start as "Submitted"
-
-        public string? ModuleName { get; set; }
+        public string Status { get; set; } = "Submitted";
 
         [Required]
         public DateTime SubmissionDate { get; set; } = DateTime.Now;
@@ -46,8 +47,6 @@ namespace CMCS_App.Models
 
         // Navigation property
         public virtual Lecturer? Lecturer { get; set; }
-
-        
 
         public decimal CalculateTotal()
         {
