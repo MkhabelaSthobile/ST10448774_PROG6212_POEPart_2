@@ -14,69 +14,96 @@ public class ProgrammeCoordinatorController : Controller
     }
 
     public IActionResult Index()
-{
-    var claimsList = new List<Claim>
-    {           
-        new Claim
-        {
-            ClaimID = 101,
-            LecturerID = 1,
-            HoursWorked = 12,
-            Month = "August",
-            Status = "Submitted",
-            SubmissionDate = DateTime.Now,
-            ModuleName = "Computer Science 101",
-            HourlyRate = 500m
-        },
-        new Claim
-        {
-            ClaimID = 102,
-            LecturerID = 2,
-            HoursWorked = 10,
-            Month = "August",
-            Status = "Approved by Coordinator",
-            SubmissionDate = DateTime.Now.AddDays(-2),
-            ModuleName = "Software Engineering",
-            HourlyRate = 600m
-        },
-        new Claim
-        {
-            ClaimID = 103,
-            LecturerID = 3,
-            HoursWorked = 15,
-            Month = "September",
-            Status = "Rejected by Coordinator",
-            SubmissionDate = DateTime.Now.AddDays(-1),
-            ModuleName = "Data Structures",
-            HourlyRate = 550m
-        }
-    };
+    {
+        // Get claims from database with lecturer information
+        var claims = _context.Claims
+            .Include(c => c.Lecturer)
+            .OrderByDescending(c => c.SubmissionDate)
+            .ToList();
 
-    return View(claimsList);
-}
-
+        return View(claims);
+    }
 
     [HttpPost]
     public IActionResult Approve(int id)
     {
-        var claim = _context.Claims.Find(id);
-        if (claim != null)
+        try
         {
-            claim.Status = "Approved by Coordinator";
-            _context.SaveChanges();
+            var claim = _context.Claims
+                .Include(c => c.Lecturer)
+                .FirstOrDefault(c => c.ClaimID == id);
+
+            if (claim != null)
+            {
+                claim.Status = "Approved by Coordinator";
+                claim.RejectionReason = null; // Clear any previous rejection reason
+                _context.SaveChanges();
+
+                TempData["SuccessMessage"] = $"Claim #{claim.ClaimID} for {claim.Lecturer.FullName} has been approved.";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Claim not found.";
+            }
         }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = "Error approving claim. Please try again.";
+            Console.WriteLine($"Error approving claim: {ex.Message}");
+        }
+
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
-    public IActionResult Reject(int id)
+    public IActionResult Reject(int id, string rejectionReason)
     {
-        var claim = _context.Claims.Find(id);
-        if (claim != null)
+        try
         {
-            claim.Status = "Rejected by Coordinator";
-            _context.SaveChanges();
+            var claim = _context.Claims
+                .Include(c => c.Lecturer)
+                .FirstOrDefault(c => c.ClaimID == id);
+
+            if (claim != null)
+            {
+                if (string.IsNullOrEmpty(rejectionReason))
+                {
+                    TempData["ErrorMessage"] = "Please provide a reason for rejection.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                claim.Status = "Rejected by Coordinator";
+                claim.RejectionReason = rejectionReason;
+                _context.SaveChanges();
+
+                TempData["SuccessMessage"] = $"Claim #{claim.ClaimID} for {claim.Lecturer.FullName} has been rejected.";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Claim not found.";
+            }
         }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = "Error rejecting claim. Please try again.";
+            Console.WriteLine($"Error rejecting claim: {ex.Message}");
+        }
+
         return RedirectToAction(nameof(Index));
+    }
+
+    // New action to view claim details
+    public IActionResult Details(int id)
+    {
+        var claim = _context.Claims
+            .Include(c => c.Lecturer)
+            .FirstOrDefault(c => c.ClaimID == id);
+
+        if (claim == null)
+        {
+            return NotFound();
+        }
+
+        return View(claim);
     }
 }
