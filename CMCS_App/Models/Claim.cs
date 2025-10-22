@@ -9,10 +9,10 @@ namespace CMCS_App.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ClaimID { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Lecturer ID is required")]
         public int LecturerID { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Month is required")]
         [StringLength(50)]
         public string Month { get; set; } = string.Empty;
 
@@ -36,9 +36,9 @@ namespace CMCS_App.Models
         [Required]
         public DateTime SubmissionDate { get; set; } = DateTime.Now;
 
-        public string? SupportingDocument { get; set; }
+        public string? SupportingDocument { get; set; } = string.Empty;
 
-        public string? RejectionReason { get; set; }
+        public string? RejectionReason { get; set; } = string.Empty;
 
         // Navigation property - can be null if not loaded
         public virtual Lecturer? Lecturer { get; set; }

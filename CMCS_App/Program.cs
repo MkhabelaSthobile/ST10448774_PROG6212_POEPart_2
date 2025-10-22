@@ -13,7 +13,7 @@ namespace CMCS_App
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 
-            // Use SQL Server database
+            // Use SQL Server database (update connection string as needed)
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -23,25 +23,7 @@ namespace CMCS_App
                 options.MaxRequestBodySize = 10 * 1024 * 1024; // 10MB
             });
 
-            // Add session support for user authentication (for future use)
-            builder.Services.AddSession(options =>
-            {
-                options.IdleTimeout = TimeSpan.FromMinutes(30);
-                options.Cookie.HttpOnly = true;
-                options.Cookie.IsEssential = true;
-            });
-
-            // Add HTTP context accessor for file uploads
-            builder.Services.AddHttpContextAccessor();
-
             var app = builder.Build();
-
-            // Create uploads directory if it doesn't exist
-            var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads");
-            if (!Directory.Exists(uploadsPath))
-            {
-                Directory.CreateDirectory(uploadsPath);
-            }
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
@@ -51,15 +33,29 @@ namespace CMCS_App
             }
 
             app.UseHttpsRedirection();
-            app.UseStaticFiles(); // This enables serving static files from wwwroot
+            app.UseStaticFiles();
             app.UseRouting();
             app.UseAuthorization();
-            app.UseSession();
 
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
 
+            // Seed the database
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
+                    var context = services.GetRequiredService<ApplicationDbContext>();
+                    context.Database.EnsureCreated(); // Creates database if it doesn't exist
+                }
+                catch (Exception ex)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "An error occurred creating the DB.");
+                }
+            }
 
             app.Run();
         }
