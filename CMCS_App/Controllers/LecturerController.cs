@@ -40,17 +40,11 @@ namespace CMCS_App.Controllers
             {
                 if (ModelState.IsValid)
                 {
+                    // Set lecturer ID (using demo ID since no login)
                     claim.LecturerID = 1;
 
-                    // Get lecturer details to set module name and hourly rate
-                    var lecturer = await _context.Lecturers.FindAsync(claim.LecturerID);
-                    if (lecturer != null)
-                    {
-                        lecturer.ModuleName = lecturer.ModuleName;
-                        claim.HourlyRate = lecturer.HourlyRate;
-                    }
-
-                    claim.TotalAmount = claim.CalculateTotal(lecturer.HourlyRate);
+                    // Calculate total amount using user-input values
+                    claim.TotalAmount = claim.CalculateTotal();
                     claim.Status = "Submitted";
                     claim.SubmissionDate = DateTime.Now;
 

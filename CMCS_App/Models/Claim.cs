@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CMCS_App.Models
 {
+    [Table("Claims")]
     public class Claim
     {
         [Key]
@@ -10,6 +11,7 @@ namespace CMCS_App.Models
         public int ClaimID { get; set; }
 
         [Required]
+        [ForeignKey("Lecturer")]
         public int LecturerID { get; set; }
 
         [Required]
@@ -29,13 +31,11 @@ namespace CMCS_App.Models
         [Column(TypeName = "decimal(10,2)")]
         public decimal TotalAmount { get; set; }
 
-        /*[Required]
-        [StringLength(100)]
-        public string ModuleName { get; set; } = string.Empty;*/
-
         [Required]
         [StringLength(100)]
-        public string Status { get; set; } = "Pending";
+        public string Status { get; set; } = "Submitted"; // Start as "Submitted"
+
+        public string? ModuleName { get; set; }
 
         [Required]
         public DateTime SubmissionDate { get; set; } = DateTime.Now;
@@ -44,28 +44,31 @@ namespace CMCS_App.Models
 
         public string? RejectionReason { get; set; }
 
-        // Navigation property - can be null if not loaded
+        // Navigation property
         public virtual Lecturer? Lecturer { get; set; }
 
-        // Status tracking properties (for real-time updates)
-        /*public DateTime? LastStatusUpdate { get; set; }
-        public string? StatusUpdatedBy { get; set; }*/
+        
 
-        public decimal CalculateTotal(decimal hourlyRate)
+        public decimal CalculateTotal()
         {
-            return HoursWorked * hourlyRate;
+            TotalAmount = HoursWorked * HourlyRate;
+            return TotalAmount;
         }
 
         public void SubmitForApproval()
         {
             Status = "Submitted";
-            // Removed LastStatusUpdate for now
         }
 
         public void UpdateStatus(string newStatus)
         {
             Status = newStatus;
-            // Removed LastStatusUpdate for now
+        }
+
+        public void UpdateStatus(string newStatus, string rejectionReason)
+        {
+            Status = newStatus;
+            RejectionReason = rejectionReason;
         }
     }
 }

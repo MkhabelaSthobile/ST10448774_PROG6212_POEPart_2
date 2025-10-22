@@ -5,7 +5,7 @@
 }
 
 <div class="container mt-4">
-    <h2 class="mb-4 text-primary">Lecturer Dashboard - @Model.FirstOrDefault()?.Lecturer?.FullName</h2>
+    <h2 class="mb-4 text-primary">Lecturer Dashboard</h2>
 
     <!-- Success/Error Messages -->
     @if (TempData["SuccessMessage"] != null)
@@ -33,15 +33,16 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Module Name</label>
-                            <input type="text" class="form-control" value="@Model.FirstOrDefault()?.Lecturer?.ModuleName" readonly />
-                            <div class="form-text">Your assigned module</div>
+                            <label for="ModuleName" class="form-label">Module Name *</label>
+                            <input type="text" class="form-control" id="ModuleName" name="ModuleName"
+                                   required placeholder="Enter module name" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Hourly Rate (R)</label>
-                            <input type="text" class="form-control" value="@Model.FirstOrDefault()?.Lecturer?.HourlyRate.ToString("F2")" readonly />
-                            <div class="form-text">Your contracted hourly rate</div>
+                            <label for="HourlyRate" class="form-label">Hourly Rate (R) *</label>
+                            <input type="number" class="form-control" id="HourlyRate" name="HourlyRate"
+                                   step="0.01" min="0.01" max="1000" required
+                                   placeholder="Enter hourly rate" />
                         </div>
 
                         <div class="mb-3">
@@ -68,7 +69,7 @@
                         <div class="mb-3">
                             <label for="HoursWorked" class="form-label">Hours Worked *</label>
                             <input type="number" class="form-control" id="HoursWorked" name="HoursWorked"
-                                   min="1" max="100" required placeholder="Enter hours worked" />
+                                   min="1" max="200" required placeholder="Enter hours worked" />
                         </div>
 
                         <div class="mb-3">
@@ -106,6 +107,7 @@
                     <thead class="table-dark">
                         <tr>
                             <th>Claim ID</th>
+                            <th>Module</th>
                             <th>Month</th>
                             <th>Hours</th>
                             <th>Hourly Rate</th>
@@ -129,7 +131,7 @@
                                 <td>
                                     @if (!string.IsNullOrEmpty(claim.SupportingDocument))
                                     {
-                                        <a asp-action="DownloadDocument" asp-route-fileName="@claim.SupportingDocument"
+                                        <a asp-action="DownloadDocument" asp-route-claimId="@claim.ClaimID" asp-route-fileName="@claim.SupportingDocument"
                                            class="badge bg-info text-decoration-none">
                                             Download
                                         </a>
@@ -180,7 +182,7 @@
         // Calculate total amount automatically
         document.addEventListener('DOMContentLoaded', function() {
             const hoursInput = document.getElementById('HoursWorked');
-            const rateInput = document.querySelector('input[readonly]'); // The readonly hourly rate input
+            const rateInput = document.getElementById('HourlyRate');
             const totalInput = document.getElementById('TotalAmount');
 
             function calculateTotal() {
@@ -191,8 +193,9 @@
             }
 
             hoursInput.addEventListener('input', calculateTotal);
+            rateInput.addEventListener('input', calculateTotal);
 
-            // Initialize calculation on page load if hours are already entered
+            // Initialize calculation on page load
             calculateTotal();
         });
     </script>

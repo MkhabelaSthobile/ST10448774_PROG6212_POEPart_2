@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CMCS_App.Models
 {
+    [Table("Lecturers")]
     public class Lecturer
     {
         [Key]
