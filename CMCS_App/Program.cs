@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using CMCS_App.Data;
 using CMCS_App.Models;
-using Microsoft.EntityFrameworkCore.SqlServer;
 
 namespace CMCS_App
 {
@@ -14,30 +13,53 @@ namespace CMCS_App
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 
-            // Use InMemory database for prototype
+            // Use SQL Server database
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseInMemoryDatabase("CMCS_DB"));
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // Configure file upload limits
+            builder.Services.Configure<IISServerOptions>(options =>
+            {
+                options.MaxRequestBodySize = 10 * 1024 * 1024; // 10MB
+            });
+
+            // Add session support for user authentication (for future use)
+            builder.Services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromMinutes(30);
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
+
+            // Add HTTP context accessor for file uploads
+            builder.Services.AddHttpContextAccessor();
 
             var app = builder.Build();
+
+            // Create uploads directory if it doesn't exist
+            var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads");
+            if (!Directory.Exists(uploadsPath))
+            {
+                Directory.CreateDirectory(uploadsPath);
+            }
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
 
             app.UseHttpsRedirection();
+            app.UseStaticFiles(); // This enables serving static files from wwwroot
             app.UseRouting();
-            app.UseStaticFiles();
             app.UseAuthorization();
+            app.UseSession();
 
-            app.MapStaticAssets();
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}")
-                .WithStaticAssets();
+                pattern: "{controller=Home}/{action=Index}/{id?}");
+
 
             app.Run();
         }
