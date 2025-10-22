@@ -9,10 +9,10 @@ namespace CMCS_App.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ClaimID { get; set; }
 
-        [Required(ErrorMessage = "Lecturer ID is required")]
+        [Required]
         public int LecturerID { get; set; }
 
-        [Required(ErrorMessage = "Month is required")]
+        [Required]
         [StringLength(50)]
         public string Month { get; set; } = string.Empty;
 
@@ -33,35 +33,105 @@ namespace CMCS_App.Models
         [StringLength(100)]
         public string Status { get; set; } = "Pending";
 
-        [Required(ErrorMessage = "Module Name is required")]
-        public string ModuleName { get; set; }
-
         [Required]
         public DateTime SubmissionDate { get; set; } = DateTime.Now;
 
-        public string? SupportingDocument { get; set; } = string.Empty;
+        public string? SupportingDocument { get; set; }
 
-        public string? RejectionReason { get; set; } = string.Empty;
+        public string? RejectionReason { get; set; }
 
         // Navigation property - can be null if not loaded
         public virtual Lecturer? Lecturer { get; set; }
 
+        // Status tracking properties (for real-time updates)
+        public DateTime? LastStatusUpdate { get; set; }
+        public string? StatusUpdatedBy { get; set; }
 
-
-
-        public decimal CalculateTotal(decimal hourlyRate)
+        public decimal CalculateTotal()
         {
-            return HoursWorked * hourlyRate;
+            TotalAmount = HoursWorked * HourlyRate;
+            return TotalAmount;
         }
 
         public void SubmitForApproval()
         {
             Status = "Submitted";
+            LastStatusUpdate = DateTime.Now;
+            StatusUpdatedBy = "Lecturer";
         }
 
         public void UpdateStatus(string newStatus)
         {
             Status = newStatus;
+            LastStatusUpdate = DateTime.Now;
+        }
+
+        public void UpdateStatus(string newStatus, string updatedBy)
+        {
+            Status = newStatus;
+            LastStatusUpdate = DateTime.Now;
+            StatusUpdatedBy = updatedBy;
+        }
+
+        // Status tracking methods
+        public string GetStatusBadgeClass()
+        {
+            return Status switch
+            {
+                "Pending" or "Submitted" => "bg-warning",
+                "Approved by Coordinator" => "bg-info",
+                "Approved by Manager" => "bg-success",
+                "Rejected" or "Rejected by Coordinator" or "Rejected by Manager" => "bg-danger",
+                _ => "bg-secondary"
+            };
+        }
+
+        public string GetStatusTimeline()
+        {
+            var timeline = $"Submitted: {SubmissionDate:dd MMM yyyy HH:mm}";
+
+            if (LastStatusUpdate.HasValue)
+            {
+                timeline += $" | Last Update: {LastStatusUpdate.Value:dd MMM yyyy HH:mm}";
+                if (!string.IsNullOrEmpty(StatusUpdatedBy))
+                {
+                    timeline += $" by {StatusUpdatedBy}";
+                }
+            }
+
+            return timeline;
+        }
+
+        public bool IsPending()
+        {
+            return Status == "Pending" || Status == "Submitted";
+        }
+
+        public bool IsApproved()
+        {
+            return Status.Contains("Approved");
+        }
+
+        public bool IsRejected()
+        {
+            return Status.Contains("Rejected");
+        }
+
+        public TimeSpan GetProcessingTime()
+        {
+            return DateTime.Now - SubmissionDate;
+        }
+
+        public string GetProcessingTimeDisplay()
+        {
+            var processingTime = GetProcessingTime();
+
+            if (processingTime.TotalDays >= 1)
+                return $"{(int)processingTime.TotalDays} days";
+            else if (processingTime.TotalHours >= 1)
+                return $"{(int)processingTime.TotalHours} hours";
+            else
+                return $"{(int)processingTime.TotalMinutes} minutes";
         }
     }
 }

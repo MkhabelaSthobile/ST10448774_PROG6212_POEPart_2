@@ -1,11 +1,19 @@
-﻿using System.Security.Claims;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Security.Claims;
 
 namespace CMCS_App.Models
 {
     public class ProgrammeCoordinator
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int CoordinatorID { get; set; }
+
+        [Required]
         public string Name { get; set; } = string.Empty;
+
+        [Required]
         public string Email { get; set; } = string.Empty;
 
         // Methods (prototype only)
