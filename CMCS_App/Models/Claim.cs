@@ -33,6 +33,9 @@ namespace CMCS_App.Models
         [StringLength(100)]
         public string Status { get; set; } = "Pending";
 
+        [Required(ErrorMessage = "Module Name is required")]
+        public string ModuleName { get; set; }
+
         [Required]
         public DateTime SubmissionDate { get; set; } = DateTime.Now;
 
@@ -43,13 +46,12 @@ namespace CMCS_App.Models
         // Navigation property - can be null if not loaded
         public virtual Lecturer? Lecturer { get; set; }
 
-        
 
 
-        public decimal CalculateTotal()
+
+        public decimal CalculateTotal(decimal hourlyRate)
         {
-            TotalAmount = HoursWorked * HourlyRate;
-            return TotalAmount;
+            return HoursWorked * hourlyRate;
         }
 
         public void SubmitForApproval()
